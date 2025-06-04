@@ -22,7 +22,13 @@ const Register = () => {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
-  const [validationError, setValidationError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [generalError, setGeneralError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,55 +36,85 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
+    // Clear field error when user starts typing
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: ''
+    }));
   };
 
   const validateForm = () => {
-    if (formData.password !== formData.confirmPassword) {
-      setValidationError('Passwords do not match');
-      return false;
-    }
+    const errors = {};
+    let isValid = true;
+
+    // Password validation
     if (formData.password.length < 6) {
-      setValidationError('Password must be at least 6 characters long');
-      return false;
+      errors.password = 'Password must be at least 6 characters long';
+      isValid = false;
+    } else if (!/(?=.*[A-Za-z])(?=.*\d)/.test(formData.password)) {
+      errors.password = 'Password must contain at least one letter and one number';
+      isValid = false;
     }
-    setValidationError('');
-    return true;
+
+    // Confirm password validation
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    // Username validation
+    if (formData.username.length < 3 || formData.username.length > 30) {
+      errors.username = 'Username must be between 3 and 30 characters';
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      errors.username = 'Username can only contain letters, numbers, and underscores';
+      isValid = false;
+    }
+
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Registration attempt started'); // Debug log
+    setGeneralError('');
     
     if (!validateForm()) {
-      console.log('Form validation failed:', validationError); // Debug log
       return;
     }
 
     setLoading(true);
     try {
-      console.log('Attempting registration with:', { 
-        username: formData.username,
-        email: formData.email 
-      }); // Debug log
-      
       const success = await register(
         formData.username,
         formData.email,
         formData.password
       );
       
-      console.log('Registration response:', success); // Debug log
-      
       if (success) {
-        console.log('Registration successful, navigating to dashboard'); // Debug log
         navigate('/dashboard', { replace: true });
       }
     } catch (err) {
-      console.error('Registration error:', err); // Debug log
-      if (err.response?.data?.message) {
-        setValidationError(err.response.data.message);
+      console.error('Registration error:', err);
+      
+      // Handle backend validation errors
+      if (err.response?.data?.errors) {
+        const backendErrors = {};
+        err.response.data.errors.forEach(error => {
+          backendErrors[error.field] = error.message;
+        });
+        setFieldErrors(backendErrors);
+      } else if (err.response?.data?.message) {
+        // Handle general backend error
+        setGeneralError(err.response.data.message);
       } else {
-        setValidationError('Registration failed. Please try again.');
+        setGeneralError('Registration failed. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -92,9 +128,9 @@ const Register = () => {
           Register
         </Typography>
 
-        {(error || validationError) && (
+        {(error || generalError) && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {error || validationError}
+            {error || generalError}
           </Alert>
         )}
 
@@ -109,6 +145,8 @@ const Register = () => {
             required
             autoComplete="username"
             disabled={loading}
+            error={!!fieldErrors.username}
+            helperText={fieldErrors.username}
           />
 
           <TextField
@@ -122,6 +160,8 @@ const Register = () => {
             required
             autoComplete="email"
             disabled={loading}
+            error={!!fieldErrors.email}
+            helperText={fieldErrors.email}
           />
 
           <TextField
@@ -135,6 +175,8 @@ const Register = () => {
             required
             autoComplete="new-password"
             disabled={loading}
+            error={!!fieldErrors.password}
+            helperText={fieldErrors.password}
           />
 
           <TextField
@@ -148,6 +190,8 @@ const Register = () => {
             required
             autoComplete="new-password"
             disabled={loading}
+            error={!!fieldErrors.confirmPassword}
+            helperText={fieldErrors.confirmPassword}
           />
 
           <Button
