@@ -47,18 +47,39 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    console.log('Registration attempt started'); // Debug log
+    
+    if (!validateForm()) {
+      console.log('Form validation failed:', validationError); // Debug log
+      return;
+    }
 
     setLoading(true);
     try {
-      await register(
+      console.log('Attempting registration with:', { 
+        username: formData.username,
+        email: formData.email 
+      }); // Debug log
+      
+      const success = await register(
         formData.username,
         formData.email,
         formData.password
       );
-      navigate('/dashboard');
+      
+      console.log('Registration response:', success); // Debug log
+      
+      if (success) {
+        console.log('Registration successful, navigating to dashboard'); // Debug log
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
-      // Error is handled by AuthContext
+      console.error('Registration error:', err); // Debug log
+      if (err.response?.data?.message) {
+        setValidationError(err.response.data.message);
+      } else {
+        setValidationError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

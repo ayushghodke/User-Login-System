@@ -31,11 +31,20 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Login attempt started');
     setLoading(true);
+    
     try {
-      await login(formData.email, formData.password);
-      navigate('/dashboard');
+      console.log('Attempting login with:', { email: formData.email });
+      const success = await login(formData.email, formData.password);
+      console.log('Login response:', success);
+      
+      if (success) {
+        console.log('Login successful, navigating to dashboard');
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
+      console.error('Login error:', err);
       // Error is handled by AuthContext
     } finally {
       setLoading(false);
